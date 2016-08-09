@@ -386,4 +386,14 @@
     XCTAssertEqualObjects([mock method], [NSDecimalNumber decimalNumberWithDecimal:[@0 decimalValue]]);
 }
 
+- (void)testTwoClassMocksWithProtocolsInARow {
+    // May break incorrect variadics
+
+    id mock1 = OCMStrictProtocolMock(@protocol(TestProtocolForMacroTesting), @protocol(NSLocking));
+    id mock2 = OCMStrictProtocolMock(@protocol(TestProtocolForMacroTesting));
+
+    XCTAssertNotNil(mock1);
+    XCTAssertNotNil(mock2);
+}
+
 @end

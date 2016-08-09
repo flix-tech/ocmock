@@ -34,7 +34,7 @@
 }
 
 + (id)mockForClass:(Class)aClass;
-+ (id)mockForProtocol:(Protocol *)aProtocol;
++ (id)mockForProtocols:(Protocol *)aProtocol, ... NS_REQUIRES_NIL_TERMINATION;
 + (id)partialMockForObject:(NSObject *)anObject;
 
 + (id)observerMock;

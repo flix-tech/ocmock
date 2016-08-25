@@ -24,10 +24,17 @@
 #import <OCMock/NSNotificationCenter+OCMAdditions.h>
 #import <OCMock/OCMFunctions.h>
 
+#define _OCMNilProtocol() nil
+#define _OCM_OCMProtocols(...) __VA_ARGS__, nil
 
-#define OCMClassMock(cls) ({ id _mock = [OCMockObject mockForClass:cls]; [_mock makeNice]; _mock; })
+#define _OCMConcatFirstTwoArgs(arg1, arg2, ...) arg1 ## arg2
+#define _OCMCountProtocolsArgChooser(...) _OCMConcatFirstTwoArgs(__VA_ARGS__)
+#define _OCMProtocols() NilProtocol
+#define _OCMProtocolsArgChooser(...) _OCMCountProtocolsArgChooser(_OCM, _OCMProtocols , ##__VA_ARGS__ ())
 
-#define OCMStrictClassMock(cls) [OCMockObject mockForClass:cls]
+#define OCMClassMock(cls, protocol...) ({ id _mock = [OCMockObject mockForClass:cls protocols:_OCMProtocolsArgChooser(protocol)(protocol)]; [_mock makeNice]; _mock; })
+
+#define OCMStrictClassMock(cls, protocol...) [OCMockObject mockForClass:cls protocols:_OCMProtocolsArgChooser(protocol)(protocol)]
 
 #define OCMProtocolMock(protocol...) ({ id _mock = [OCMockObject mockForProtocols:protocol, nil]; [_mock makeNice]; _mock; })
 

@@ -16,18 +16,12 @@
 
 #import <XCTest/XCTest.h>
 #import <OCMock/OCMock.h>
+#import "TestProtocol.h"
 
 
 // --------------------------------------------------------------------------------------
 //	Helper classes and protocols for testing
 // --------------------------------------------------------------------------------------
-
-@protocol TestProtocol
-+ (NSString *)stringValueClassMethod;
-- (int)primitiveValue;
-@optional
-- (id)objectValue;
-@end
 
 @interface InterfaceForTypedef : NSObject {
     int prop1;

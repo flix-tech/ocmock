@@ -33,7 +33,7 @@
     NSMutableArray  *invocations;
 }
 
-+ (id)mockForClass:(Class)aClass;
++ (id)mockForClass:(Class)aClass protocols:(Protocol *)aProtocol, ... NS_REQUIRES_NIL_TERMINATION;
 + (id)mockForProtocols:(Protocol *)aProtocol, ... NS_REQUIRES_NIL_TERMINATION;
 + (id)partialMockForObject:(NSObject *)anObject;
 

@@ -386,14 +386,102 @@
     XCTAssertEqualObjects([mock method], [NSDecimalNumber decimalNumberWithDecimal:[@0 decimalValue]]);
 }
 
-- (void)testTwoClassMocksWithProtocolsInARow {
+- (void)testCanUseMacroToCreateMockForClassAndSingleProtocol
+{
+    id mock = OCMClassMock([NSObject class], @protocol(TestProtocolForMacroTesting));
+    XCTAssertNotNil(mock);
+
+    id Value = [NSObject new];
+    OCMExpect([mock stringValue]).andReturn(Value);
+
+    XCTAssertEqual(Value, [mock stringValue]);
+
+    OCMVerifyAll(mock);
+
+    OCMExpect([mock stringValue]).andReturn(Value);
+
+    XCTAssertThrows([mock verify], @"Should have complained about expected method not being invoked");
+}
+
+- (void)testCanUseMacroToCreateMockForClassAndMultipleProtocols
+{
+    id mock = OCMClassMock([NSObject class], @protocol(TestProtocolForMacroTesting), @protocol(NSLocking));
+    XCTAssertNotNil(mock);
+
+    id Value = [NSObject new];
+    OCMExpect([mock stringValue]).andReturn(Value);
+
+    OCMExpect([mock lock]);
+
+    XCTAssertEqual(Value, [mock stringValue]);
+
+    [mock lock];
+
+    OCMVerifyAll(mock);
+
+    OCMExpect([mock stringValue]).andReturn(Value);
+
+    OCMExpect([mock lock]);
+
+    XCTAssertThrows([mock verify], @"Should have complained about expected method not being invoked");
+}
+
+- (void)testCanUseMacroToCreateStrictMockForClassAndSingleProtocol
+{
+    id mock = OCMStrictClassMock([NSObject class], @protocol(TestProtocolForMacroTesting));
+    XCTAssertNotNil(mock);
+
+    id Value = [NSObject new];
+    OCMExpect([mock stringValue]).andReturn(Value);
+
+    XCTAssertEqual(Value, [mock stringValue]);
+
+    OCMVerifyAll(mock);
+
+    XCTAssertThrows([mock stringValue]);
+
+    OCMExpect([mock stringValue]).andReturn(Value);
+
+    XCTAssertThrows([mock verify], @"Should have complained about expected method not being invoked");
+}
+
+- (void)testCanUseMacroToCreateStrictMockForClassAndMultipleProtocols
+{
+    id mock = OCMStrictClassMock([NSObject class], @protocol(TestProtocolForMacroTesting), @protocol(NSLocking));
+    XCTAssertNotNil(mock);
+
+    id Value = [NSObject new];
+    OCMExpect([mock stringValue]).andReturn(Value);
+
+    OCMExpect([mock lock]);
+
+    XCTAssertEqual(Value, [mock stringValue]);
+
+    [mock lock];
+
+    OCMVerifyAll(mock);
+
+    XCTAssertThrows([mock stringValue]);
+    XCTAssertThrows([mock lock]);
+
+    OCMExpect([mock stringValue]).andReturn(Value);
+
+    OCMExpect([mock lock]);
+
+    XCTAssertThrows([mock verify], @"Should have complained about expected method not being invoked");
+}
+
+- (void)testTwoClassMocksWithProtocolsInARow
+{
     // May break incorrect variadics
 
-    id mock1 = OCMStrictProtocolMock(@protocol(TestProtocolForMacroTesting), @protocol(NSLocking));
-    id mock2 = OCMStrictProtocolMock(@protocol(TestProtocolForMacroTesting));
+    id mock1 = OCMClassMock([NSObject class]);
+    id mock2 = OCMClassMock([NSObject class], @protocol(TestProtocolForMacroTesting), @protocol(NSLocking));
+    id mock3 = OCMStrictProtocolMock(@protocol(TestProtocolForMacroTesting));
 
     XCTAssertNotNil(mock1);
     XCTAssertNotNil(mock2);
+    XCTAssertNotNil(mock3);
 }
 
 @end

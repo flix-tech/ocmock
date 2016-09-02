@@ -396,7 +396,7 @@
         }
     }
     [stub handleInvocation:anInvocation];
-    [stub release];
+    [stub autorelease];
 
     return YES;
 }

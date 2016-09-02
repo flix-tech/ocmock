@@ -41,7 +41,11 @@ typedef InterfaceForTypedef* PointerTypedefInterface;
 - (void)typedefParameter:(TypedefInterface*)parameter;
 @end
 
+@protocol TestProtocolForProtocolMock
 
+- (id)delegateBar;
+
+@end
 
 @interface OCMockObjectProtocolMocksTests : XCTestCase
 
@@ -179,6 +183,19 @@ typedef InterfaceForTypedef* PointerTypedefInterface;
 - (void)testRefusesToCreateProtocolMockForNilProtocol
 {
     XCTAssertThrows(OCMProtocolMock(nil));
+}
+
+- (void)testDoNotReleaseReturnValueTooEarly
+{
+    id mock = OCMProtocolMock(@protocol(TestProtocolForProtocolMock));
+
+    @autoreleasepool {
+        OCMExpect([mock delegateBar]).andReturn([NSObject new]);
+    }
+
+    id delegateBar = [mock delegateBar];
+
+    XCTAssertNotNil(delegateBar);
 }
 
 @end

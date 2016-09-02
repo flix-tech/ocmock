@@ -68,6 +68,12 @@ static NSUInteger initializeCallCount = 0;
 
 @end
 
+@protocol TestProtocolForCombinedMock
+
+- (id)delegateBar;
+
+@end
+
 
 @interface OCMockObjectClassMethodMockingTests : XCTestCase
 
@@ -316,6 +322,35 @@ static NSUInteger initializeCallCount = 0;
     id newObject = [TestClassWithClassMethods new];
 
     XCTAssertEqualObjects(dummyObject, newObject, @"Should have stubbed +new method");
+}
+
+- (void)testDoNotReleaseReturnValueTooEarlyForClassMock
+{
+    id mock = OCMClassMock([TestClassWithClassMethods class]);
+
+    @autoreleasepool {
+        OCMExpect([mock bar]).andReturn([NSObject new]);
+    }
+
+    id bar = [mock bar];
+
+    XCTAssertNotNil(bar);
+}
+
+- (void)testDoNotReleaseReturnValueTooEarlyForCombinedMock
+{
+    id mock = OCMClassMock([TestClassWithClassMethods class], @protocol(TestProtocolForCombinedMock));
+
+    @autoreleasepool {
+        OCMExpect([mock bar]).andReturn([NSObject new]);
+        OCMExpect([mock delegateBar]).andReturn([NSObject new]);
+    }
+
+    id bar = [mock bar];
+    id delegateBar = [mock delegateBar];
+
+    XCTAssertNotNil(bar);
+    XCTAssertNotNil(delegateBar);
 }
 
 @end

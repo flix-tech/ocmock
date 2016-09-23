@@ -18,13 +18,15 @@
 #import "OCClassMockObject.h"
 #import "NSObject+OCMAdditions.h"
 #import "OCMFunctionsPrivate.h"
-#import "OCMInvocationStub.h"
+#import "OCMInvocationExpectation.h"
 #import "NSMethodSignature+OCMAdditions.h"
 #import "OCProtocolsProxy.h"
 
 @implementation OCClassMockObject
 {
     OCProtocolsProxy *protocolsProxy;
+    BOOL hasClassMethodStubs;
+    NSMutableArray *expectations;
 }
 
 #pragma mark  Initialisers, description, accessors, etc.
@@ -35,8 +37,8 @@
     [super init];
     mockedClass = aClass;
     protocolsProxy = [[OCProtocolsProxy alloc] initWithProtocols:protocols];
+    expectations = [NSMutableArray new];
 
-    [self prepareClassForClassMethodMocking];
     return self;
 }
 
@@ -67,6 +69,20 @@
 
 #pragma mark  Extending/overriding superclass behaviour
 
+- (void)makeNice
+{
+    [super makeNice];
+    [self prepareClassForClassMethodMocking];
+}
+
+- (void)makeStrict
+{
+    [super makeStrict];
+
+    if(!(hasClassMethodStubs || [self hasUnsatisfiedClassMethodExpectations]))
+        [self stopMocking];
+}
+
 - (void)stopMocking
 {
     if(originalMetaClass != nil)
@@ -96,7 +112,24 @@
 {
     [super addStub:aStub];
     if([aStub recordedAsClassMethod])
+    {
         [self setupForwarderForClassMethodSelector:[[aStub recordedInvocation] selector]];
+
+        if (!(hasClassMethodStubs || [aStub isKindOfClass:[OCMInvocationExpectation class]])) {
+            hasClassMethodStubs = YES;
+        }
+    }
+}
+
+- (void)addExpectation:(OCMInvocationExpectation *)anExpectation
+{
+    [super addExpectation:anExpectation];
+
+    if([anExpectation recordedAsClassMethod] && ![anExpectation isMatchAndReject])
+        @synchronized(expectations)
+    {
+        [expectations addObject:anExpectation];
+    }
 }
 
 
@@ -110,6 +143,10 @@
 
     /* if there is another mock for this exact class, stop it */
     id otherMock = OCMGetAssociatedMockForClass(mockedClass, NO);
+
+    if(otherMock == self)
+        return;
+
     if(otherMock != nil)
         [otherMock restoreMetaClass];
 
@@ -160,6 +197,8 @@
 
 - (void)setupForwarderForClassMethodSelector:(SEL)selector
 {
+    [self prepareClassForClassMethodMocking];
+
     SEL aliasSelector = OCMAliasForOriginalSelector(selector);
     if(class_getClassMethod(mockedClass, aliasSelector) != NULL)
         return;
@@ -238,6 +277,23 @@
 - (BOOL)conformsToProtocol:(Protocol *)aProtocol
 {
     return class_conformsToProtocol(mockedClass, aProtocol) || [protocolsProxy conformsToProtocol:aProtocol];
+}
+
+#pragma mark  Private API
+
+- (BOOL)hasUnsatisfiedClassMethodExpectations
+{
+    @synchronized(expectations) {
+        for(OCMInvocationExpectation *e in expectations)
+        {
+            if(![e isSatisfied])
+            {
+                return YES;
+            }
+        }
+    }
+
+    return NO;
 }
 
 @end

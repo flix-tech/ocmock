@@ -32,6 +32,7 @@
     NSParameterAssert(anObject != nil);
     [self assertClassIsSupported:[anObject class]];
 	[super initWithClass:[anObject class] protocols:nil];
+    [self makeNice]; // Partial mock supposed to be nice
 	realObject = [anObject retain];
     [self prepareObjectForInstanceMethodMocking];
 	return self;

@@ -251,12 +251,13 @@ static NSUInteger initializeCallCount = 0;
     XCTAssertEqualObjects(@"Bar-ClassMethod", [TestClassWithClassMethods bar], @"Should have 'unstubbed' class method 'bar'.");
 }
 
-- (void)testSecondClassMockDeactivatesFirst
+- (void)testSecondNiceClassMockDeactivatesFirst
 {
     id mock1 = [[OCClassMockObject alloc] initWithClass:[TestClassWithClassMethods class] protocols:nil];
     [[[mock1 stub] andReturn:@"mocked-foo-1"] foo];
 
     id mock2 = [[OCClassMockObject alloc] initWithClass:[TestClassWithClassMethods class] protocols:nil];
+    [mock2 makeNice];
     XCTAssertEqualObjects(@"Foo-ClassMethod", [TestClassWithClassMethods foo]);
 
     [mock2 stopMocking];
@@ -304,6 +305,8 @@ static NSUInteger initializeCallCount = 0;
     NSUInteger countBefore = [TestClassWithClassMethods initializeCallCount];
 
     id mock = [OCMockObject mockForClass:[TestClassWithClassMethods class] protocols:nil];
+    [mock makeNice];
+
     [TestClassWithClassMethods foo];
     [[mock verify] foo];
 
@@ -351,6 +354,111 @@ static NSUInteger initializeCallCount = 0;
 
     XCTAssertNotNil(bar);
     XCTAssertNotNil(delegateBar);
+}
+
+- (void)testStrictMockDoesNotChangeMetaclass
+{
+    Class mockedClass = [TestClassWithClassMethods class];
+
+    Class originalMetaClass = object_getClass(mockedClass);
+
+    NS_VALID_UNTIL_END_OF_SCOPE id mock = OCMStrictClassMock(mockedClass, @protocol(TestProtocolForCombinedMock));
+
+    XCTAssertEqual(object_getClass(mockedClass), originalMetaClass);
+}
+
+- (void)testMakingMockWithNoClassMethodStubsStrictRestoresOriginalMetaclass
+{
+    Class mockedClass = [TestClassWithClassMethods class];
+
+    Class originalMetaClass = object_getClass(mockedClass);
+
+    NS_VALID_UNTIL_END_OF_SCOPE id mock = OCMClassMock(mockedClass, @protocol(TestProtocolForCombinedMock));
+
+    [[[mock stub] andReturn:@"instance-bar-mocked"] bar];
+
+    [mock makeStrict];
+
+    XCTAssertEqual(object_getClass(mockedClass), originalMetaClass);
+}
+
+- (void)testMakingMockWithSutisfiedClassMethodExpectationStrictRestoresOriginalMetaclass
+{
+    Class mockedClass = [TestClassWithClassMethods class];
+
+    Class originalMetaClass = object_getClass(mockedClass);
+
+    NS_VALID_UNTIL_END_OF_SCOPE id mock = OCMClassMock(mockedClass, @protocol(TestProtocolForCombinedMock));
+
+    NSString *const ExpectedValue = @"class-bar-mocked";
+
+    [[[[mock expect] classMethod] andReturn:ExpectedValue] bar];
+
+    XCTAssertEqualObjects([mockedClass bar], ExpectedValue);
+
+    [mock makeStrict];
+
+    XCTAssertEqual(object_getClass(mockedClass), originalMetaClass);
+}
+
+- (void)testMakingMockWithClassMethodRejectionStrictRestoresOriginalMetaclass
+{
+    Class mockedClass = [TestClassWithClassMethods class];
+
+    Class originalMetaClass = object_getClass(mockedClass);
+
+    NS_VALID_UNTIL_END_OF_SCOPE id mock = OCMClassMock(mockedClass, @protocol(TestProtocolForCombinedMock));
+
+    [[[mock reject] classMethod] bar];
+
+    [mock makeStrict];
+
+    XCTAssertEqual(object_getClass(mockedClass), originalMetaClass);
+}
+
+- (void)testMakingMockWithClassMethodStubStrictDoesNotRestoreOriginalMetaclass
+{
+    Class mockedClass = [TestClassWithClassMethods class];
+
+    NS_VALID_UNTIL_END_OF_SCOPE id mock = OCMClassMock(mockedClass, @protocol(TestProtocolForCombinedMock));
+
+    Class mockMetaClass = object_getClass(mockedClass);
+
+    [[[[mock stub] classMethod] andReturn:@"class-bar-mocked"] bar];
+
+    [mock makeStrict];
+
+    XCTAssertEqual(object_getClass(mockedClass), mockMetaClass);
+}
+
+- (void)testMakingMockWithUnsutisfiedClassMethodExpectationStrictDoesNotRestoreOriginalMetaclass
+{
+    Class mockedClass = [TestClassWithClassMethods class];
+
+    NS_VALID_UNTIL_END_OF_SCOPE id mock = OCMClassMock(mockedClass, @protocol(TestProtocolForCombinedMock));
+
+    Class mockMetaClass = object_getClass(mockedClass);
+
+    [[[[mock expect] classMethod] andReturn:@"class-bar-mocked"] bar];
+
+    [mock makeStrict];
+
+    XCTAssertEqual(object_getClass(mockedClass), mockMetaClass);
+}
+
+- (void)testStrictRootClassMockingDoesNotBreakResolvingClassMethods
+{
+    // Vital for NSKeyedUnarchiver with requiresSecureCoding enabled
+    NS_VALID_UNTIL_END_OF_SCOPE id mock = OCMStrictClassMock([NSObject class]);
+
+    Class metaCls = object_getClass([TestClassWithClassMethods class]);
+    IMP imp = NULL;
+    SEL sel = @selector(supportsSecureCoding);
+
+    do {
+        imp = class_getMethodImplementation(metaCls, sel);
+        metaCls = class_getSuperclass(metaCls);
+    } while (imp != NULL);
 }
 
 @end
